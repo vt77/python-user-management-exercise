@@ -17,11 +17,11 @@ from flask import (
 
 import settings
 
-from db import ObjectManager, DatabaseManager, BackendError
+from db import ObjectManager, DatabaseManager
 from model.user import User
 from model.audit import Audit
-from model import ValidateException, ModelException
 from db.sqlite import SqLiteBackend
+from service import request_context
 
 logging.basicConfig(
     format="[API]%(asctime)-15s %(process)d %(levelname)s %(name)s %(message)s",
@@ -38,47 +38,6 @@ def get_next_request_id():
 backend = SqLiteBackend('users-audit.db')
 DatabaseManager.register_backend(backend)
 
-
-class ApiResponse:
-    """Convert general responce to API  format serilizable json
-    """
-    def __init__(self,request_id, object_list):
-        self.request_id = request_id
-        self.object_list = object_list
-
-    def __iter__(self):
-        yield "request_id", self.request_id
-        yield "status", "ok"
-        yield "payload", self.payload
-
-    @property
-    def payload(self):
-        if isinstance(self.object_list,list):
-            return {'items':[dict(e) for e in self.object_list]}
-        return {'item':dict(self.object_list)}
-
-class ApiError:
-    """ General error format """
-    def __init__(self,request_id, error_message, error_type='general'):
-        self.request_id = request_id
-        self.error_message = error_message
-        self.error_type = error_type
-        logger.error("[%s][%s]%s",self.request_id,self.error_type,self.error_message)
-
-    def __iter__(self):
-        yield "request_id", self.request_id
-        yield "status", "error"
-        yield "error_type", self.error_type
-        yield "message", self.error_message
-
-class ApiValidationError(ApiError):
-    def __init__(self,request_id, error_message):
-        super(ApiValidationError, self).__init__(request_id, error_message,'validation')
-
-class ApiModelError(ApiError):
-    def __init__(self,request_id, error_message):
-        super(ApiModelError, self).__init__(request_id, error_message,'model')
-
 @app.route("/api")
 def main():
     return "<h1>Users managment service</h1>"
@@ -93,117 +52,76 @@ def api_users_get():
     # Get all users except deleted
     request_id = get_next_request_id()
     logger.debug("[%s]Get users list",request_id)
-    try:
+    with request_context(request_id) as conn:
         ret = ObjectManager.get_many(User,{'deleted':0})
-        response = ApiResponse(request_id,ret)
-    except Exception as ex:
-        logger.exception(str(ex))
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
+        conn.create_response(ret)
+    return jsonify(conn.response)
 
 @app.route("/api/v1/users/",methods=['POST'])
 def api_user_create():
     request_id = get_next_request_id()
     logger.debug("[%s]User create",request_id)
-    try:
+    with request_context(request_id) as conn:
         data = request.json
         if not data or not isinstance(data,dict):
             abort(400)
         user = User.create(**data)
         user.save()
-        response = ApiResponse(request_id,user)
-    except ValidateException as ex:
-        response = ApiError(request_id,str(ex),'validation')
-    except ModelException as ex:
-        response = ApiError(request_id,str(ex),'model')
-    except Exception as ex:
-        logger.exception(str(ex))
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
+        conn.create_response(user)
+    return jsonify(conn.response)
+
 
 @app.route("/api/v1/users/<username>",methods=['GET'])
 def api_user_get(username):
     request_id = get_next_request_id()
     logger.debug("[%s]User get : %s",request_id,username)
-    try:
+    with request_context(request_id) as conn:
         ret = ObjectManager.get_one(User,{'deleted':0,'username':username})
-        response = ApiResponse(request_id,ret)
-    except BackendError as ex:
-        response = ApiError(request_id,str(ex),'backend')
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
-
+        conn.create_response(ret)
+    return jsonify(conn.response)
 
 @app.route("/api/v1/users/<username>",methods=['PUT'])
 def api_users_update(username):
     request_id = get_next_request_id()
     logger.debug("[%s]User update : %s",request_id,username)
-    try:
+    with request_context(request_id) as conn:
         user = ObjectManager.get_one(User,{'deleted':0,'username':username})
         data = request.json
         for k,v in data.items():
             user.update(k,v)
         user.save()
-        response = ApiResponse(request_id, user)
-    except ValidateException as ex:
-        response = ApiValidationError(request_id,str(ex))
-    except ModelException as ex:
-        response = ApiModelError(request_id,str(ex))
-    except Exception as ex:
-        logger.exception(str(ex))
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
+        conn.create_response(user)
+    return jsonify(conn.response)
 
 @app.route("/api/v1/users/<username>",methods=['DELETE'])
 def api_users_delete(username):
     request_id = get_next_request_id()
     logger.debug("[%s]User delete : %s",request_id,username)
-    try:
+    with request_context(request_id) as conn:
         user = ObjectManager.get_one(User,{'deleted':0,'username':username})
         user.delete()
-        response = ApiResponse(request_id,user)
-    except ValidateException as ex:
-        response = ApiValidationError(request_id,str(ex))
-    except ModelException as ex:
-        response = ApiModelError(request_id,str(ex))
-    except Exception as ex:
-        logger.exception(str(ex))
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
+        conn.create_response(user)
+    return jsonify(conn.response)
 
 @app.route("/api/v1/audits/",methods=['POST'])
 def api_audit_create():
     request_id = get_next_request_id()
     logger.debug("[%s]Audit create",request_id)
-    try:
+    with request_context(request_id) as conn:
         data = request.json
         audit = Audit.create(**data)
         audit.save()
-        response = ApiResponse(request_id,audit)
-    except ValidateException as ex:
-        response = ApiValidationError(request_id,str(ex))
-    except ModelException as ex:
-        response = ApiModelError(request_id,str(ex))
-    except Exception as ex:
-        logger.exception(str(ex))
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
+        conn.create_response(audit)
+    return jsonify(conn.response)
 
 @app.route("/api/v1/audits/",methods=['GET'])
 def api_audit_get():
     request_id = get_next_request_id()
     logger.debug("[%s]Audit list",request_id)
-    try:
+    with request_context(request_id) as conn:
         ret = ObjectManager.get_many(Audit,order={'datetime'})
-        response = ApiResponse(request_id,ret)
-    except ValidateException as ex:
-        response = ApiValidationError(request_id,str(ex))
-    except ModelException as ex:
-        response = ApiModelError(request_id,str(ex))
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
-    return jsonify(dict(response))
+        conn.create_response(ret)
+    return jsonify(conn.response)
 
 @app.route("/api/v1/audits/rotate",methods=['GET'])
 def api_audit_rotate():
