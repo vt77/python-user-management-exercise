@@ -12,6 +12,10 @@ class User(ModelBase):
         self.deleted = ModelField('gender',gender,validator=EnumValidator([0,1]))
         super(User, self).__init__(**kwargs)
 
+    def get_db_key(self):
+        return ["username", None if self.is_new() else self.username]
+
+
     def delete(self):
         """User actually can not be deleted. Only delete flag is set
         """

@@ -16,7 +16,7 @@ from flask import (
 
 import settings
 
-from db import ObjectManager, DatabaseManager
+from db import ObjectManager, DatabaseManager, BackendError
 from model.user import User
 from model.audit import Audit
 from model import ValidateException, ModelException
@@ -34,7 +34,7 @@ app = Flask("users-backend")
 def get_next_request_id():
     return uuid.uuid4().hex
 
-backend = SqLiteBackend('release.db')
+backend = SqLiteBackend('users-audit.db')
 DatabaseManager.register_backend(backend)
 
 
@@ -52,7 +52,9 @@ class ApiResponse:
 
     @property
     def payload(self):
-        return {'users':[dict(e) for e in self.object_list]}
+        if isinstance(self.object_list,list):
+            return {'items':[dict(e) for e in self.object_list]}
+        return {'item':dict(self.object_list)}
 
 class ApiError:
     """ General error format """
@@ -122,6 +124,8 @@ def api_user_get(username):
     try:
         ret = ObjectManager.get_one(User,{'deleted':0,'username':username})
         response = ApiResponse(request_id,ret)
+    except BackendError as ex:
+        response = ApiError(request_id,str(ex),'backend')
     except Exception as ex:
         response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
@@ -199,5 +203,7 @@ def api_audit_user_get(username):
 @app.route("/api/v1/audit/rotate",methods=['GET'])
 def api_audit_rotate():
     """ Special API endpoint to rotate audit records. Called from cronjob """
-    Audit.rotate()
+    if not hasattr(backend,'rotate'):
+        return "Rotate not supported by backend"
+    backend.rotate(audit,max_size=100)
     return "OK"

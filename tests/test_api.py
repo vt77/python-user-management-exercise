@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 app.testing = True
 
 
-from db import DatabaseManager
+from db import DatabaseManager,BackendErrorNotFound
 
 backend = MagicMock()
 DatabaseManager.register_backend(backend)
@@ -33,6 +33,13 @@ class TestApi(unittest.TestCase):
     def test_api_get_user(self):
         client = app.test_client()
         backend.load_by_id.return_value = {'username':'test1','password':'p1234','gender':'male'}
+        rv = client.get("/api/v1/users/test1")
+        print(rv.data)
+        self.assertNotEqual(rv.data, None)
+
+    def test_api_get_user_not_found(self):
+        client = app.test_client()
+        backend.load_by_id.side_effect = BackendErrorNotFound('Not found')
         rv = client.get("/api/v1/users/test1")
         print(rv.data)
         self.assertNotEqual(rv.data, None)
