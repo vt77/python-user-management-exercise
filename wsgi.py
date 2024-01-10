@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import uuid
+import json
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "lib"))
 
@@ -106,15 +107,18 @@ def api_user_create():
     logger.debug("[%s]User create",request_id)
     try:
         data = request.json
+        if not data or not isinstance(data,dict):
+            abort(400)
         user = User.create(**data)
         user.save()
         response = ApiResponse(request_id,[user])
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
     except ValidateException as ex:
         response = ApiError(request_id,str(ex),'validation')
     except ModelException as ex:
         response = ApiError(request_id,str(ex),'model')
+    except Exception as ex:
+        logger.exception(str(ex))
+        response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
 
 @app.route("/api/v1/users/<username>",methods=['GET'])
@@ -142,12 +146,13 @@ def api_users_update(username):
             user.update(k,v)
         user.save()
         response = ApiResponse(request_id, user)
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
     except ValidateException as ex:
         response = ApiValidationError(request_id,str(ex))
     except ModelException as ex:
         response = ApiModelError(request_id,str(ex))
+    except Exception as ex:
+        logger.exception(str(ex))
+        response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
 
 @app.route("/api/v1/users/<username>",methods=['DELETE'])
@@ -158,52 +163,52 @@ def api_users_delete(username):
         user = ObjectManager.get_one(User,{'deleted':0,'username':username})
         user.delete()
         response = ApiResponse(request_id,user)
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
     except ValidateException as ex:
         response = ApiValidationError(request_id,str(ex))
     except ModelException as ex:
         response = ApiModelError(request_id,str(ex))
+    except Exception as ex:
+        logger.exception(str(ex))
+        response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
 
-@app.route("/api/v1/audit/<username>",methods=['PUT'])
-def api_audit_user_create(username):
+@app.route("/api/v1/audits/",methods=['POST'])
+def api_audit_create():
     request_id = get_next_request_id()
-    logger.debug("[%s]Audit create : %s",request_id,username)
+    logger.debug("[%s]Audit create",request_id)
     try:
         data = request.json
         audit = Audit.create(**data)
         audit.save()
-        response = ApiResponse(request_id,[audit])
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
+        response = ApiResponse(request_id,audit)
     except ValidateException as ex:
         response = ApiValidationError(request_id,str(ex))
     except ModelException as ex:
         response = ApiModelError(request_id,str(ex))
+    except Exception as ex:
+        logger.exception(str(ex))
+        response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
 
-@app.route("/api/v1/audit/<username>",methods=['GET'])
-def api_audit_user_get(username):
+@app.route("/api/v1/audits/",methods=['GET'])
+def api_audit_get():
     request_id = get_next_request_id()
-    logger.debug("[%s]Audit list : %s",request_id,username)
+    logger.debug("[%s]Audit list",request_id)
     try:
-        ret = ObjectManager.get_many(User,{'username':username},order={'created'})
+        ret = ObjectManager.get_many(Audit,order={'datetime'})
         response = ApiResponse(request_id,ret)
-    except Exception as ex:
-        response = ApiError(request_id,str(ex))
     except ValidateException as ex:
         response = ApiValidationError(request_id,str(ex))
     except ModelException as ex:
         response = ApiModelError(request_id,str(ex))
+    except Exception as ex:
+        response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
 
-
-
-@app.route("/api/v1/audit/rotate",methods=['GET'])
+@app.route("/api/v1/audits/rotate",methods=['GET'])
 def api_audit_rotate():
     """ Special API endpoint to rotate audit records. Called from cronjob """
     if not hasattr(backend,'rotate'):
         return "Rotate not supported by backend"
-    backend.rotate(audit,max_size=100)
+    backend.rotate('audit',max_size=100)
     return "OK"

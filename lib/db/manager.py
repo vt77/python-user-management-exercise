@@ -23,7 +23,8 @@ class ObjectManager:
         return model(**model_data)
 
     @staticmethod
-    def get_many(model:Type[DbObject],where_clause:dict):
+    def get_many(model:Type[DbObject],where_clause:dict=None,order=None):
+        # TODO: order not supported yet
         objects_data = DatabaseManager.get_backend().load_list(model._db_table, where_clause)
         return [model(**o) for o in objects_data]
 

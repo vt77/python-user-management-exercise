@@ -26,7 +26,7 @@ class MockModel(ModelBase):
 class MockBackend(DbBackend):
     last_data_to_save = {}
     def save(self,model:DbBackend):
-        self.last_data_to_save = model.get_dirty_fields()
+        self.last_data_to_save = model.get_db_updates()
     def load_by_id(self,table:str, id:dict):
         return None
     def clear(self):
@@ -110,7 +110,7 @@ class TestModel(unittest.TestCase):
         new_model = MockModel(**model_data)
         with self.assertRaises(ModelException) as context:
             new_model.update('username','nothing')
-        self.assertEqual(str(context.exception),'Field username is read only')
+        self.assertEqual(str(context.exception),'username is read only')
 
 
     def test_model_update_save_fail_password(self):
@@ -126,5 +126,5 @@ class TestModel(unittest.TestCase):
         new_model.update('password','s') # Password too short
         with self.assertRaises(ValidateException) as context:
             new_model.save()
-        self.assertEqual(str(context.exception),'should be betwwen 6 and 12 characters length')
+        self.assertEqual(str(context.exception),'password should be betwwen 6 and 12 characters length')
 

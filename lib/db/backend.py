@@ -18,7 +18,7 @@ class DbObject(ABC):
         """
         raise NotImplementedError()
 
-    def get_dirty_fields(self) -> dict:
+    def get_db_updates(self) -> dict:
         """Returns fields name for create/update operations
         """
         raise NotImplementedError()

@@ -26,7 +26,7 @@ class TestSqLiteBackend(unittest.TestCase):
         with contextlib.suppress(FileNotFoundError):
             os.remove(TestSqLiteBackend.DB_FILENAME)
 
-    def setUp(self):        
+    def setUp(self):
         logger.debug("Setup test")
         self._backend = SqLiteBackend(TestSqLiteBackend.DB_FILENAME)
         DatabaseManager.register_backend(self._backend)
@@ -41,7 +41,7 @@ class TestSqLiteBackend(unittest.TestCase):
         # Mock DbObject
         user = MagicMock(_db_table="test_table")
         user.get_db_key.return_value = ['username',None]
-        user.get_dirty_fields.return_value = {'username':username,'password':'12345678'}
+        user.get_db_updates.return_value = {'username':username,'password':'12345678'}
         DatabaseManager.get_backend().save(user)
         return user
 
@@ -56,7 +56,7 @@ class TestSqLiteBackend(unittest.TestCase):
         """ Test sqlite update """
         user  =  self.create_test_user('test')
         user.get_db_key.return_value = ['username','test']
-        user.get_dirty_fields.return_value = {'password':'1234'}
+        user.get_db_updates.return_value = {'password':'1234'}
         DatabaseManager.get_backend().save(user)
         user_data = DatabaseManager.get_backend().load_by_id('test_table',{'username':'test'})
         self.assertEqual(user_data['username'],'test')

@@ -12,7 +12,7 @@ class SqLiteBackend(DbBackend):
 
     def save(self,model:DbObject):
         key, value = model.get_db_key()
-        fields_to_save = model.get_dirty_fields()
+        fields_to_save = model.get_db_updates()
         fields_names = fields_to_save.keys()
         params = [str(f)  for f in fields_to_save.values()]
         
