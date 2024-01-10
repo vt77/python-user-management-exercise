@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 from model.base import ModelBase, ModelField, ModelException
 from model.validator import PasswordValidator,ValidateException
-from db import DatabaseManager,DbBackend
+from db import DatabaseManager,DbBackend,DbObject
 
 
 class MockModel(ModelBase):
@@ -19,11 +19,14 @@ class MockModel(ModelBase):
         self.username = ModelField('username',username,read_only=True,unique=True)
         self.password = ModelField('password',password,validator=PasswordValidator())
         super(MockModel, self).__init__(**kwargs)
+
+    def get_db_key(self):
+        return ["username", None if self.is_new() else self.username]
         
 class MockBackend(DbBackend):
     last_data_to_save = {}
-    def save(self,table:str,model:dict):
-        self.last_data_to_save = model
+    def save(self,model:DbBackend):
+        self.last_data_to_save = model.get_dirty_fields()
     def load_by_id(self,table:str, id:dict):
         return None
     def clear(self):

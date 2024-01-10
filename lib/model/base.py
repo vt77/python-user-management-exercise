@@ -1,8 +1,9 @@
 
 import logging
+from abc import ABC
 
-from db import DatabaseManager
-from model import Model
+
+from db import DatabaseManager, DbObject
 from .validator import AsciiValidator
 
 class ModelException(Exception):
@@ -10,6 +11,30 @@ class ModelException(Exception):
 
 logger = logging.getLogger(__name__)
 
+class Model(ABC):
+    
+    def validate(self):
+        """Validate model before save/create
+        """
+        raise NotImplementedError
+
+    def save(self):
+        """Save model using database backend
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def create(cls,params):
+        """Create new model
+
+        Args:
+            params (dict): parameters specified to model
+
+        Returns:
+            Model: newly created model
+        """
+        raise NotImplementedError
+        
 
 class ModelField:
     name = None
@@ -38,15 +63,14 @@ class ModelField:
         self.validator.validate(self.value)
 
 
-class ModelBase(Model):
+class ModelBase(Model,DbObject):
     
     _is_new = False
     _duty_fields = {}
-    _db_table = None
 
     def __init__(self,is_new=False):
         self._is_new = is_new
-        self._duty_fields = self.__slots__ if is_new else {}
+        self._duty_fields = set(self.__slots__) if is_new else set()
 
     def validate(self) -> dict:
         """
@@ -65,7 +89,7 @@ class ModelBase(Model):
                 raise ModelException(f"Field {field} has bad type")
             #This will raise exception on error
             f.validate()
-            if f.unique and DatabaseManager.get_backend().load_by_id(self._db_table,{field:f.value}):
+            if f.unique and DatabaseManager.get_backend().load_by_id(self,{field:f.value}):
                 raise ModelException(f"{field} already exists")
             logger.debug("Add field to update %s",field)
             validated_data[field]=f.value
@@ -74,14 +98,16 @@ class ModelBase(Model):
     def save(self):
         """Save model using database backend
         """
-        validated_data = self.validate()
-        if not bool(validated_data):
-            raise ModelException("Nothing to save")
-        logger.debug("[MODEL]Save: %s",validated_data)
-        DatabaseManager.get_backend().save(self._db_table, validated_data)
+        if not self._duty_fields:
+            raise ModelException(f"Nothing to save")
+        logger.debug("[MODEL]Save: %s",self)
+        DatabaseManager.get_backend().save(self)
         
     def delete(self):
-        DatabaseManager.get_backend().save(self._db_table, self.get_key())
+        """Delete object from database
+        """
+        logger.debug("[MODEL]Save: %s",self)
+        DatabaseManager.get_backend().delete(self)
 
     def is_new(self):
         """ checks if object newly created
@@ -110,7 +136,7 @@ class ModelBase(Model):
 
         logger.debug("[MODEL]Update field %s",field)
         f.value = value
-        self._duty_fields[field] = 1
+        self._duty_fields.add(field)
 
 
     @classmethod
@@ -128,3 +154,20 @@ class ModelBase(Model):
     def __iter__(self):
         for f in self.__slots__:
             yield f, str(getattr(self,f))
+
+    def __str__(self):
+        return f"{self.__class__.__name__}{self.get_db_key()}"
+
+    #  DBObject implementation
+    def get_db_key(self):
+        """Return list in format [key,key_value]
+        """
+        #NOTE: Implement it in delivered class with appropriative values
+        raise NotImplementedError
+
+    def get_dirty_fields(self) -> dict:
+        """Returns fields name for create/update operations
+        """
+        validated_data = self.validate()
+        logger.debug("[MODEL]Values to update : %s",validated_data)
+        return validated_data

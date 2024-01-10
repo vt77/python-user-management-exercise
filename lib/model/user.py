@@ -1,7 +1,6 @@
 from .base import ModelBase, ModelField
 from .validator import PasswordValidator,EnumValidator
 
-
 class User(ModelBase):
     __slots__ = ['username','password','gender','deleted']
     _db_table = 'users'
@@ -18,3 +17,5 @@ class User(ModelBase):
         """
         self.update('deleted',1)
         self.save()
+        #audit = Audit.create()
+        #audit.save()

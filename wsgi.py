@@ -16,11 +16,11 @@ from flask import (
 
 import settings
 
-from db import ObjectManager
+from db import ObjectManager, DatabaseManager
 from model.user import User
 from model.audit import Audit
 from model import ValidateException, ModelException
-
+from db.sqlite import SqLiteBackend
 
 logging.basicConfig(
     format="[API]%(asctime)-15s %(process)d %(levelname)s %(name)s %(message)s",
@@ -33,6 +33,10 @@ app = Flask("users-backend")
 
 def get_next_request_id():
     return uuid.uuid4().hex
+
+backend = SqLiteBackend('release.db')
+DatabaseManager.register_backend(backend)
+
 
 class ApiResponse:
     """Convert general responce to API  format serilizable json
@@ -81,7 +85,7 @@ def api():
     return render_template("api.html", devices=[request.hostname])
 
 
-@app.route("/api/v1/users/",method=['GET'])
+@app.route("/api/v1/users/",methods=['GET'])
 def api_users_get():
     # Get all users except deleted
     request_id = get_next_request_id()
@@ -89,11 +93,12 @@ def api_users_get():
     try:
         ret = ObjectManager.get_many(User,{'deleted':0})
         response = ApiResponse(request_id,ret)
-    except Exception as e:
+    except Exception as ex:
+        logger.exception(str(ex))
         response = ApiError(request_id,str(ex))
     return jsonify(dict(response))
 
-@app.route("/api/v1/users/",method=['POST'])
+@app.route("/api/v1/users/",methods=['POST'])
 def api_user_create():
     request_id = get_next_request_id()
     logger.debug("[%s]User create",request_id)
@@ -110,7 +115,7 @@ def api_user_create():
         response = ApiError(request_id,str(ex),'model')
     return jsonify(dict(response))
 
-@app.route("/api/v1/users/<username>",method=['GET'])
+@app.route("/api/v1/users/<username>",methods=['GET'])
 def api_user_get(username):
     request_id = get_next_request_id()
     logger.debug("[%s]User get : %s",request_id,username)
@@ -122,7 +127,7 @@ def api_user_get(username):
     return jsonify(dict(response))
 
 
-@app.route("/api/v1/users/<username>",method=['PUT'])
+@app.route("/api/v1/users/<username>",methods=['PUT'])
 def api_users_update(username):
     request_id = get_next_request_id()
     logger.debug("[%s]User update : %s",request_id,username)
@@ -141,7 +146,7 @@ def api_users_update(username):
         response = ApiModelError(request_id,str(ex))
     return jsonify(dict(response))
 
-@app.route("/api/v1/users/<username>",method=['DELETE'])
+@app.route("/api/v1/users/<username>",methods=['DELETE'])
 def api_users_delete(username):
     request_id = get_next_request_id()
     logger.debug("[%s]User delete : %s",request_id,username)
@@ -157,7 +162,7 @@ def api_users_delete(username):
         response = ApiModelError(request_id,str(ex))
     return jsonify(dict(response))
 
-@app.route("/api/v1/audit/<username>",method=['PUT'])
+@app.route("/api/v1/audit/<username>",methods=['PUT'])
 def api_audit_user_create(username):
     request_id = get_next_request_id()
     logger.debug("[%s]Audit create : %s",request_id,username)
@@ -174,7 +179,7 @@ def api_audit_user_create(username):
         response = ApiModelError(request_id,str(ex))
     return jsonify(dict(response))
 
-@app.route("/api/v1/audit/<username>",method=['GET'])
+@app.route("/api/v1/audit/<username>",methods=['GET'])
 def api_audit_user_get(username):
     request_id = get_next_request_id()
     logger.debug("[%s]Audit list : %s",request_id,username)
@@ -191,7 +196,7 @@ def api_audit_user_get(username):
 
 
 
-@app.route("/api/v1/audit/rotate",method=['GET'])
+@app.route("/api/v1/audit/rotate",methods=['GET'])
 def api_audit_rotate():
     """ Special API endpoint to rotate audit records. Called from cronjob """
     Audit.rotate()
