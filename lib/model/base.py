@@ -102,7 +102,7 @@ class ModelBase(Model,DbObject):
             #This will raise exception on error
             f.validate()
             with contextlib.suppress(BackendErrorNotFound):
-                if f.unique and DatabaseManager.get_backend().load_by_id(self,{field:f.value}):
+                if f.unique and DatabaseManager.get_backend().load_by_id(self._db_table,{field:f.value}):
                     raise ValidateException(f"{field} already exists")
             logger.debug("Add field to update %s",field)
             validated_data[field]=f.value

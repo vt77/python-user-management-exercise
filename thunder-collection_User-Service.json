@@ -1,0 +1,94 @@
+{
+    "client": "Thunder Client",
+    "collectionName": "User-Service",
+    "dateExported": "2024-01-10T15:03:37.954Z",
+    "version": "1.1",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "16cb545b-1606-4517-b022-70e8e2edd5ad",
+            "colId": "93362767-6786-40e9-ba0b-4526e48539ec",
+            "containerId": "",
+            "name": "Get Users",
+            "url": "http://127.0.0.1:5000/api/v1/users/",
+            "method": "GET",
+            "sortNum": 10000,
+            "created": "2024-01-10T14:23:20.604Z",
+            "modified": "2024-01-10T14:24:00.186Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        },
+        {
+            "_id": "d340e1b0-500d-4c78-9bd7-e473e7156cf3",
+            "colId": "93362767-6786-40e9-ba0b-4526e48539ec",
+            "containerId": "",
+            "name": "Create user",
+            "url": "http://127.0.0.1:5000/api/v1/users/",
+            "method": "POST",
+            "sortNum": 20000,
+            "created": "2024-01-10T14:43:49.780Z",
+            "modified": "2024-01-10T14:57:16.727Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"username\":\"test3\",\n  \"password\": \"ppp09876\",\n  \"gender\":\"male\"\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "da4e08dd-f26f-4325-98bb-6fd444f339c8",
+            "colId": "93362767-6786-40e9-ba0b-4526e48539ec",
+            "containerId": "",
+            "name": "Update user",
+            "url": "http://127.0.0.1:5000/api/v1/users/test2",
+            "method": "PUT",
+            "sortNum": 30000,
+            "created": "2024-01-10T14:53:10.424Z",
+            "modified": "2024-01-10T14:58:13.297Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"password\": \"changed_pwd\",\n  \"gender\":\"male\"\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "82cc734b-5a02-4f78-848d-bea60e1963f1",
+            "colId": "93362767-6786-40e9-ba0b-4526e48539ec",
+            "containerId": "",
+            "name": "Create audit",
+            "url": "http://127.0.0.1:5000/api/v1/audits/",
+            "method": "POST",
+            "sortNum": 40000,
+            "created": "2024-01-10T14:59:08.066Z",
+            "modified": "2024-01-10T15:03:12.779Z",
+            "headers": [],
+            "params": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"username\":\"test1\",\n  \"message\":\"Logged-in\"\n}",
+                "form": []
+            },
+            "tests": []
+        },
+        {
+            "_id": "8619a26e-9a34-48da-ba49-c18e7b9aa005",
+            "colId": "93362767-6786-40e9-ba0b-4526e48539ec",
+            "containerId": "",
+            "name": "Get Audits",
+            "url": "http://127.0.0.1:5000/api/v1/audits/",
+            "method": "GET",
+            "sortNum": 50000,
+            "created": "2024-01-10T15:02:33.453Z",
+            "modified": "2024-01-10T15:02:46.420Z",
+            "headers": [],
+            "params": [],
+            "tests": []
+        }
+    ]
+}

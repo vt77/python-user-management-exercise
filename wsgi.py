@@ -111,7 +111,7 @@ def api_user_create():
             abort(400)
         user = User.create(**data)
         user.save()
-        response = ApiResponse(request_id,[user])
+        response = ApiResponse(request_id,user)
     except ValidateException as ex:
         response = ApiError(request_id,str(ex),'validation')
     except ModelException as ex:
@@ -212,3 +212,9 @@ def api_audit_rotate():
         return "Rotate not supported by backend"
     backend.rotate('audit',max_size=100)
     return "OK"
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+

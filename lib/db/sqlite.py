@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class SqLiteBackend(DbBackend):
     def __init__(self,db_path):
-        self.connection = sqlite3.connect(db_path)
+        self.connection = sqlite3.connect(db_path,check_same_thread=False)
 
     def save(self,model:DbObject):
         key, value = model.get_db_key()
@@ -23,7 +23,7 @@ class SqLiteBackend(DbBackend):
         else: 
             # Update object 
             values_placeholder = ','.join([f"{f}=?" for f in fields_names])
-            params.append(value) 
+            params.append(str(value))
             query = f"UPDATE {model._db_table} SET {values_placeholder} WHERE {key}=?"
 
         logger.debug("[SQLITE][SAVE]Query: %s : %s",query,params)
@@ -44,7 +44,7 @@ class SqLiteBackend(DbBackend):
     def load_by_id(self,table:str, record_id:dict):
         key_name,value = record_id.popitem()
         query = f"SELECT * from {table} WHERE {key_name}=?"
-        logger.debug("[SQLITE][SAVE]LoadById: %s : %s",query,[value])
+        logger.debug("[SQLITE][LOADID]: %s : %s",query,[value])
         cursor = self.connection.cursor()
         res = cursor.execute(query,(value,))
         row = cursor.fetchone()
@@ -87,4 +87,26 @@ class SqLiteBackend(DbBackend):
         query = f"DELETE FROM {table} ORDER BY datetime DESC LIMIT {max_size},{count}"
         res = cursor.execute(query)
         return True
+
+
+def init_database(db_name):
+    import os
+
+    if os.path.exists(db_name):
+        print(f"[+]Delete file {db_name}")
+        os.remove(db_name)
+    connection = sqlite3.connect(db_name)
+    print("Create users table")
+    connection.execute("CREATE TABLE users (username TEXT, password TEXT,gender TEXT,deleted NUMBER)")
+    print("Create audit table")
+    connection.execute("CREATE TABLE audit (uuid TEXT, username TEXT, message TEXT,datetime NUMBER)")
+    print("Create audit_archive table")
+    connection.execute("CREATE TABLE audit_archive (uuid TEXT, username TEXT, message TEXT,datetime NUMBER)")
+
+if __name__ == '__main__':
+    import sys
+    globals()[sys.argv[1]](sys.argv[2])
+
+
+
 
